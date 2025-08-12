@@ -15,7 +15,6 @@ env/
 # Model checkpoints & weights
 *.pth
 *.pt
-*.h5
 *.ckpt
 
 # Mac and editor files

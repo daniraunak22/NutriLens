@@ -1,0 +1,28 @@
+# Ignore dataset folder
+food-101/
+
+# Python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Model checkpoints & weights
+*.pth
+*.pt
+*.h5
+*.ckpt
+
+# Mac and editor files
+.DS_Store
+.vscode/
+*.log
+
+# Archives
+*.zip
+*.tar.gz

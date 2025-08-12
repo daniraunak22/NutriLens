@@ -9,7 +9,7 @@
 
 
 import tensorflow as tf
-from tensorflow.keras.applications import EfficientNetV2S #using predetermined model
+from tensorflow.keras.applications import EfficientNetV2M #using predetermined model
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout #layers in neural network
 from tensorflow.keras.optimizers import Adam #backpropogation
@@ -17,9 +17,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 import os
 
 #set constants
-# IMAGES = "/home/shay/a/dani/Nutrition_AI/food-101/images" #use this path when on linux
-IMAGES = "/Users/raunaksmac/Desktop/Nutrition AI/food-101/images"  #use this path when on mac
-IMAGE_SIZE = (224, 224)
+IMAGES = "/home/shay/a/dani/Nutrition_AI/food-101/images" #use this path when on linux
+# IMAGES = "/Users/raunaksmac/Desktop/Nutrition AI/food-101/images"  #use this path when on mac
+IMAGE_SIZE = (256, 256)
 BATCH_SIZE = 16  # reduced from 32 to expedite training on CPU
 TOTAL_CLASSES = 101
 FREEZE_EPOCHS = 80
@@ -76,8 +76,8 @@ train_data = train_data.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE) #ca
 val_data = val_data.cache().prefetch(buffer_size=AUTOTUNE)
 
 #using the EfficientNetV2M model
-base_model = EfficientNetV2S(
-    input_shape=(224, 224, 3),
+base_model = EfficientNetV2M(
+    input_shape=(256, 256, 3),
     include_top=False,
     weights='imagenet'
 )
@@ -88,7 +88,7 @@ x = base_model.output
 x = GlobalAveragePooling2D()(x)
 x = Dense(512, activation='relu')(x)
 x = Dropout(0.35)(x) #changed dropout to 0.35 to hopefully try and pick out more niche features -- can be bad if we have overfitting
-x = Dense(224, activation='relu')(x)
+x = Dense(256, activation='relu')(x)
 x = Dropout(0.35)(x)
 outputs = Dense(TOTAL_CLASSES, activation='softmax')(x)
 

@@ -101,7 +101,7 @@ model.compile(
     metrics=['accuracy']
 )
 
-early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
 
 print("Training with frozen base model...")
 model.fit(

@@ -15,13 +15,17 @@ from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout #laye
 from tensorflow.keras.optimizers import Adam #backpropogation
 from tensorflow.keras.callbacks import EarlyStopping
 
+#helps limit parallelism
+tf.config.threading.set_intra_op_parallelism_threads(4)
+tf.config.threading.set_inter_op_parallelism_threads(4)
+
 #set constants
 IMAGES = "/home/shay/a/dani/Nutrition_AI/food-101/images" #use this path when on linux
 # IMAGES = "/Users/raunaksmac/Desktop/Nutrition AI/food-101/images"  #use this path when on mac
-IMAGE_SIZE = (256, 256)
-BATCH_SIZE = 8  # reduced from 32 to expedite training on CPU
+IMAGE_SIZE = (256, 256) #alternate size can also be (224x224)
+BATCH_SIZE = 4  # reduced from 32 to expedite training on CPU
 TOTAL_CLASSES = 101
-FREEZE_EPOCHS = 80
+FREEZE_EPOCHS = 40
 UNFREEZE_EPOCHS = 20
 SEED = 123
 
@@ -67,8 +71,8 @@ def preprocess_val(image, label):
     image = tf.cast(image, tf.float32) / 255.0
     return image, label
 
-train_data = train_data.map(preprocess_train, num_parallel_calls=AUTOTUNE) #by using parallel calls, we can leverage multiple cpu cores and compute on separate cores
-val_data = val_data.map(preprocess_val, num_parallel_calls=AUTOTUNE)
+train_data = train_data.map(preprocess_train, num_parallel_calls=1) #by using parallel calls, we can leverage multiple cpu cores and compute on separate cores
+val_data = val_data.map(preprocess_val, num_parallel_calls=1)
 
 # remove caching as it leads to memory exhaustion
 # train_data = train_data.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE) #caches images so faster to retrieve, shuffles a buffer to randomly sample, and prefetches data while the model is training in a previous batch

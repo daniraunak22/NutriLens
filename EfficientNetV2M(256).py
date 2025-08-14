@@ -1,7 +1,7 @@
 # source /home/shay/a/dani/Nutrition_AI/.venv/bin/activate
 
 #improvements to implement for v3:
-#use new framework -- efficientnetv2M - done
+#use new framework -- efficientnetv2S - done
 #change learning rates for pre and post freezing -- try using cosine decay schedule or AdamW optimizer
 #change image sizes to 224x224 & 256x256 to get better feature extraction - done
 #we can clearly see a large discrepency between training and validation accuracy -- try more extreme feature manipulation so more rotation/brightness etc. - done
@@ -9,7 +9,7 @@
 
 
 import tensorflow as tf
-from tensorflow.keras.applications import EfficientNetV2M #using predetermined model
+from tensorflow.keras.applications import EfficientNetV2S #using predetermined model
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout #layers in neural network
 from tensorflow.keras.optimizers import Adam #backpropogation
@@ -75,7 +75,7 @@ val_data = val_data.map(preprocess_val, num_parallel_calls=AUTOTUNE)
 # val_data = val_data.cache().prefetch(buffer_size=AUTOTUNE)
 
 #using the EfficientNetV2M model
-base_model = EfficientNetV2M(
+base_model = EfficientNetV2S(
     input_shape=(256, 256, 3),
     include_top=False,
     weights='imagenet'
@@ -100,7 +100,7 @@ model.compile(
     metrics=['accuracy']
 )
 
-early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_accuracy', patience=3, restore_best_weights=True)
 
 print("Training with frozen base model...")
 model.fit(
@@ -128,7 +128,7 @@ model.fit(
 )
 
 #saving model
-model_path = "EfficientNetV2M_food101_model.h5"
+model_path = "EfficientNetV2S_food101_model.h5"
 model.save(model_path)
 print(f"Model saved to {model_path}")
 

@@ -18,11 +18,11 @@ import pickle
 BASE_DIR = "/Users/raunaksmac/Desktop/Nutrition AI/food-101"
 IMAGES_DIR = os.path.join(BASE_DIR, "images")
 META_DIR = os.path.join(BASE_DIR, "meta")
-IMAGE_SIZE = (224, 224)  # EfficientNetV2S uses 224x224
+IMAGE_SIZE = (256, 256)
 BATCH_SIZE = 32
 TOTAL_CLASSES = 101
-FREEZE_EPOCHS = 8
-UNFREEZE_EPOCHS = 12
+FREEZE_EPOCHS = 15
+UNFREEZE_EPOCHS = 25
 SEED = 123
 AUTOTUNE = tf.data.AUTOTUNE
 
@@ -41,34 +41,23 @@ def load_official_splits():
 classes, train_split, test_split = load_official_splits()
 class_to_idx = {class_name: idx for idx, class_name in enumerate(classes)}
 
-print(f"Loaded {len(classes)} classes")
-print(f"Train samples: {sum(len(images) for images in train_split.values())}")
-print(f"Test samples: {sum(len(images) for images in test_split.values())}")
-
 # ================================================================
 # FILE PATH CREATION
 # ================================================================
-def create_file_paths_and_labels(data_split, split_name="train"):
-    file_paths, labels, missing_files = [], [], 0
-    print(f"\nProcessing {split_name} split...")
-
+def create_file_paths_and_labels(data_split):
+    file_paths, labels = [], []
     for class_name, image_ids in data_split.items():
         class_idx = class_to_idx[class_name]
         class_dir = os.path.join(IMAGES_DIR, class_name)
-
         for image_id in image_ids:
             actual_image_id = image_id.split("/")[-1]
             file_path = os.path.join(class_dir, f"{actual_image_id}.jpg")
-            if os.path.exists(file_path):
-                file_paths.append(file_path)
-                labels.append(class_idx)
-            else:
-                missing_files += 1
-    print(f"{split_name} set: {len(file_paths)} images found, {missing_files} missing")
+            file_paths.append(file_path)
+            labels.append(class_idx)
     return file_paths, labels
 
-train_paths, train_labels = create_file_paths_and_labels(train_split, "Train")
-test_paths, test_labels = create_file_paths_and_labels(test_split, "Test")
+train_paths, train_labels = create_file_paths_and_labels(train_split)
+test_paths, test_labels = create_file_paths_and_labels(test_split)
 
 # Create validation split
 train_paths, val_paths, train_labels, val_labels = train_test_split(
@@ -77,8 +66,6 @@ train_paths, val_paths, train_labels, val_labels = train_test_split(
     random_state=SEED,
     stratify=train_labels
 )
-
-print(f"Final split - Train: {len(train_paths)}, Val: {len(val_paths)}, Test: {len(test_paths)}")
 
 # ================================================================
 # DATASET CREATION
@@ -116,7 +103,7 @@ data_augmentation = tf.keras.Sequential([
 def preprocess_train(image, label):
     image = tf.cast(image, tf.float32)
     image = data_augmentation(image, training=True)
-    image = preprocess_input(image)  # EfficientNetV2S expects [0,1]
+    image = preprocess_input(image)
     return image, label
 
 def preprocess_val(image, label):
@@ -128,21 +115,15 @@ train_data = train_data.map(preprocess_train, num_parallel_calls=AUTOTUNE)
 val_data = val_data.map(preprocess_val, num_parallel_calls=AUTOTUNE)
 test_data = test_data.map(preprocess_val, num_parallel_calls=AUTOTUNE)
 
-# Verify preprocessing
-for images, _ in train_data.take(1):
-    print(f"Preprocessed batch shape: {images.shape}")
-    print(f"Range: {tf.reduce_min(images):.4f} – {tf.reduce_max(images):.4f}")
-    print(f"Mean: {tf.reduce_mean(images):.4f}, Std: {tf.math.reduce_std(images):.4f}")
-
 # ================================================================
 # MODEL CREATION
 # ================================================================
 def create_model_efficientnet():
-    inputs = Input(shape=(224, 224, 3), name="input_layer")
+    inputs = Input(shape=(256, 256, 3), name="input_layer")
     base_model = EfficientNetV2S(
         include_top=False,
         weights="imagenet",
-        input_shape=(224, 224, 3),
+        input_shape=(256, 256, 3),
         pooling=None
     )
     base_model.trainable = False
@@ -155,7 +136,6 @@ def create_model_efficientnet():
     return model, base_model
 
 model, base_model = create_model_efficientnet()
-model.summary()
 
 # ================================================================
 # TRAINING PHASE 1 (Frozen backbone)
@@ -169,7 +149,7 @@ model.compile(
 early_stop = EarlyStopping(monitor="val_accuracy", patience=6, restore_best_weights=True, mode="max")
 reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.2, patience=3, min_lr=1e-8, mode="min")
 
-print("\n=== Training Phase 1 (Frozen backbone) ===")
+print("=== Training Phase 1 (Frozen backbone) ===")
 history_frozen = model.fit(
     train_data,
     validation_data=val_data,
@@ -181,7 +161,7 @@ history_frozen = model.fit(
 # ================================================================
 # TRAINING PHASE 2 (Unfreeze fine-tuning)
 # ================================================================
-print("\n=== Training Phase 2 (Fine-tuning) ===")
+print("=== Training Phase 2 (Fine-tuning) ===")
 base_model.trainable = True
 total_layers = len(base_model.layers)
 for i, layer in enumerate(base_model.layers):
@@ -208,7 +188,7 @@ history_unfreeze = model.fit(
 # ================================================================
 # FINAL EVALUATION
 # ================================================================
-print("\n=== Final Evaluation on Test Set ===")
+print("=== Final Evaluation on Test Set ===")
 test_results = model.evaluate(test_data, verbose=1)
 print(f"Test Loss: {test_results[0]:.4f}")
 print(f"Test Accuracy: {test_results[1]:.4f}")
